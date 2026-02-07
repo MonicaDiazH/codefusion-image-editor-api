@@ -17,6 +17,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 
 @RestController
 @RequestMapping("/api/image")
@@ -34,23 +35,31 @@ public class ImageMergeController {
         BufferedImage template = download(req.getTemplateUrl());
         BufferedImage info = download(req.getInfoUrl());
 
+        // Redimensionar template al tamaño del info
+        BufferedImage resizedTemplate =
+                resize(template, info.getWidth(), info.getHeight());
+
         BufferedImage result =
                 new BufferedImage(
-                        template.getWidth(),
-                        template.getHeight(),
+                        info.getWidth(),
+                        info.getHeight(),
                         BufferedImage.TYPE_INT_ARGB
                 );
 
         Graphics2D g = result.createGraphics();
 
+        g.setRenderingHint(
+                RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_BICUBIC
+        );
+
         g.setComposite(AlphaComposite.SrcOver);
 
-        g.drawImage(template, 0, 0, null);
+        // Fondo: template ajustado
+        g.drawImage(resizedTemplate, 0, 0, null);
 
-        int x = (template.getWidth() - info.getWidth()) / 2 + req.getOffsetX();
-        int y = (template.getHeight() - info.getHeight()) / 2 + req.getOffsetY();
-
-        g.drawImage(info, x, y, null);
+        // Capa info encima (ya calza perfecto)
+        g.drawImage(info, 0, 0, null);
 
         g.dispose();
 
@@ -62,11 +71,31 @@ public class ImageMergeController {
                 .body(out.toByteArray());
     }
 
+    private BufferedImage resize(BufferedImage src, int w, int h) {
+
+        BufferedImage resized =
+                new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+
+        Graphics2D g = resized.createGraphics();
+
+        g.setRenderingHint(
+                RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_BICUBIC
+        );
+
+        g.drawImage(src, 0, 0, w, h, null);
+
+        g.dispose();
+
+        return resized;
+    }
+
     private BufferedImage download(String url) throws Exception {
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .GET()
+                .timeout(Duration.ofSeconds(20))
                 .build();
 
         HttpResponse<byte[]> response =
@@ -78,5 +107,4 @@ public class ImageMergeController {
 
         return ImageIO.read(new ByteArrayInputStream(response.body()));
     }
-
 }
