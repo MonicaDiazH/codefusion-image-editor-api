@@ -1,0 +1,28 @@
+# Maven
+target/
+
+# IDE - IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# IDE - VS Code
+.vscode/
+
+# IDE - Vim
+*.swp
+
+# Java
+*.class
+*.jar
+*.war
+hs_err_pid*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+*.log
